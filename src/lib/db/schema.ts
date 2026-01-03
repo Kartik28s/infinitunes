@@ -5,6 +5,8 @@ import {
   text,
   timestamp,
   uuid,
+  decimal,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 
 import type { AdapterAccount } from "next-auth/adapters";
@@ -67,6 +69,23 @@ export const verificationTokens = pgTable(
  * App tables
  * -----------------------------------------------------------------------------------------------*/
 
+export const interactionTypeEnum = pgEnum("interaction_type", [
+  "meeting",
+  "call",
+  "demo",
+  "email",
+  "other",
+]);
+
+export const dealStageEnum = pgEnum("deal_stage", [
+  "prospecting",
+  "qualification",
+  "proposal",
+  "negotiation",
+  "closed_won",
+  "closed_lost",
+]);
+
 export const myPlaylists = createTable("playlist", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
@@ -77,6 +96,56 @@ export const myPlaylists = createTable("playlist", {
   // @ts-expect-error string is not assignable to type 'string[]'
   songs: text("songs").array().default("{}").notNull(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const customers = createTable("customer", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("userId")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  name: text("name").notNull(),
+  company: text("company").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const interactions = createTable("interaction", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("userId")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  customerId: uuid("customerId")
+    .references(() => customers.id, { onDelete: "cascade" })
+    .notNull(),
+  dealId: uuid("dealId").references(() => deals.id, { onDelete: "set null" }),
+  type: interactionTypeEnum("type").notNull(),
+  summary: text("summary").notNull(),
+  keyPoints: text("keyPoints").array().notNull(),
+  nextSteps: text("nextSteps").array().notNull(),
+  followUpDate: timestamp("followUpDate", { mode: "date" }),
+  transcribedFromVoice: text("transcribedFromVoice"),
+  voiceNoteProcessed: text("voiceNoteProcessed"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const deals = createTable("deal", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("userId")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  customerId: uuid("customerId")
+    .references(() => customers.id, { onDelete: "cascade" })
+    .notNull(),
+  name: text("name").notNull(),
+  value: decimal("value", { precision: 12, scale: 2 }),
+  stage: dealStageEnum("stage").default("prospecting").notNull(),
+  closeDate: timestamp("closeDate", { mode: "date" }),
+  description: text("description"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 export const favorites = createTable("favorite", {
@@ -108,3 +177,12 @@ export type NewPlaylist = typeof myPlaylists.$inferInsert;
 
 export type Favorite = typeof favorites.$inferSelect;
 export type NewFavorite = typeof favorites.$inferInsert;
+
+export type Customer = typeof customers.$inferSelect;
+export type NewCustomer = typeof customers.$inferInsert;
+
+export type Interaction = typeof interactions.$inferSelect;
+export type NewInteraction = typeof interactions.$inferInsert;
+
+export type Deal = typeof deals.$inferSelect;
+export type NewDeal = typeof deals.$inferInsert;

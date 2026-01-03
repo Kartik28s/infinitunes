@@ -9,13 +9,7 @@ import { authConfig } from "@/config/auth";
 import { db } from "./db";
 import { users } from "./db/schema";
 
-export const {
-  handlers,
-  auth,
-  signIn,
-  signOut,
-  unstable_update: update,
-} = NextAuth({
+const nextAuthConfig = NextAuth({
   ...authConfig,
 
   adapter: DrizzleAdapter(db) as Adapter,
@@ -78,6 +72,16 @@ export const {
     },
   },
 });
+
+export const {
+  handlers,
+  auth,
+  signIn,
+  signOut,
+  unstable_update: update,
+} = nextAuthConfig;
+
+export const authOptions = nextAuthConfig;
 
 /**
  * Gets the current user from the server session
